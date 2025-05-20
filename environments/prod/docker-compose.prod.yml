@@ -1,0 +1,276 @@
+version: '3.9'
+
+services:
+  # ======== AUTH SERVICE ========
+  auth_service:
+    image: ${REGISTRY_URL:-ghcr.io/your-org}/auth_service:${AUTH_SERVICE_TAG:-latest}
+    build: {}
+    environment:
+      - GO_ENV=production
+      - GIN_MODE=release
+      - LOG_LEVEL=info
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  auth_postgres:
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data/pgdata
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  auth_redis:
+    volumes:
+      - auth_redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  # ======== PAYMENT SERVICE ========
+  payment_service:
+    image: ${REGISTRY_URL:-ghcr.io/your-org}/payment_service:${PAYMENT_SERVICE_TAG:-latest}
+    build: {}
+    environment:
+      - GO_ENV=production
+      - GIN_MODE=release
+      - LOG_LEVEL=info
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  payment_postgres:
+    volumes:
+      - payment_postgres_data:/var/lib/postgresql/data/pgdata
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  payment_redis:
+    volumes:
+      - payment_redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  # ======== BOARD SERVICE ========
+  board_service:
+    image: ${REGISTRY_URL:-ghcr.io/your-org}/board_service:${BOARD_SERVICE_TAG:-latest}
+    build: {}
+    environment:
+      - GO_ENV=production
+      - GIN_MODE=release
+      - LOG_LEVEL=info
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  board_mongo:
+    volumes:
+      - board_mongo_data:/data/db
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  board_mongo_express:
+    profiles: []
+    restart: always
+
+  board_redis:
+    volumes:
+      - board_redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  # ======== CALENDAR SERVICE ========
+  calendar_service:
+    image: ${REGISTRY_URL:-ghcr.io/your-org}/calendar_service:${CALENDAR_SERVICE_TAG:-latest}
+    build: {}
+    environment:
+      - GO_ENV=production
+      - GIN_MODE=release
+      - LOG_LEVEL=info
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 10s
+        order: start-first
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.2'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  calendar_mongo:
+    volumes:
+      - calendar_mongo_data:/data/db
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+  calendar_mongo_express:
+    profiles: []
+    restart: always
+
+  calendar_redis:
+    volumes:
+      - calendar_redis_data:/data
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+    restart: always
+
+volumes:
+  auth_postgres_data:
+  auth_redis_data:
+  payment_postgres_data:
+  payment_redis_data:
+  board_mongo_data:
+  board_redis_data:
+  calendar_mongo_data:
+  calendar_redis_data:

@@ -1,0 +1,15 @@
+# data directories
+data/*/
+
+# .env files
+.env
+.env.dev
+.env.prod
+!.env.example
+
+# IDE files
+.idea/
+.vscode/
+
+# logs
+*.log

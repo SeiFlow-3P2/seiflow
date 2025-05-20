@@ -1,0 +1,332 @@
+version: '3.9'
+
+services:
+  # ======== AUTH SERVICE ========
+  auth_service:
+    build:
+      context: ./services/auth_service
+      dockerfile: Dockerfile
+    container_name: auth_service
+    depends_on:
+      - auth_postgres
+      - auth_redis
+    networks:
+      - auth_network
+      - backend_network
+    environment:
+      - DB_HOST=auth_postgres
+      - DB_PORT=5432
+      - DB_USER=${AUTH_POSTGRES_USER:-admin}
+      - DB_PASSWORD=${AUTH_POSTGRES_PASSWORD:-admin}
+      - DB_NAME=${AUTH_POSTGRES_DB:-auth}
+      - REDIS_HOST=auth_redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${AUTH_REDIS_PASSWORD:-admin}
+      - GIN_MODE=release
+    profiles: ['auth', 'all']
+    restart: unless-stopped
+
+  auth_postgres:
+    image: postgres:latest
+    container_name: auth_postgres
+    environment:
+      - POSTGRES_USER=${AUTH_POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${AUTH_POSTGRES_PASSWORD:-admin}
+      - POSTGRES_DB=${AUTH_POSTGRES_DB:-auth}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    networks:
+      - auth_network
+    command: >
+      postgres -c max_connections=1000
+               -c shared_buffers=256MB
+               -c effective_cache_size=768MB
+               -c maintenance_work_mem=64MB
+               -c checkpoint_completion_target=0.7
+               -c wal_buffers=16MB
+               -c default_statistics_target=100
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${AUTH_POSTGRES_USER:-admin} -d ${AUTH_POSTGRES_DB:-auth}" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: ['auth', 'all']
+    restart: unless-stopped
+
+  auth_redis:
+    image: redis:latest
+    container_name: auth_redis
+    environment:
+      - REDIS_PASSWORD=${AUTH_REDIS_PASSWORD:-admin}
+      - REDIS_USER=${AUTH_REDIS_USER:-admin}
+      - REDIS_USER_PASSWORD=${AUTH_REDIS_USER_PASSWORD:-admin}
+    networks:
+      - auth_network
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${AUTH_REDIS_PASSWORD:-admin}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: ['auth', 'all']
+    restart: unless-stopped
+
+  # ======== PAYMENT SERVICE ========
+  payment_service:
+    build:
+      context: ./services/payment_service
+      dockerfile: Dockerfile
+    container_name: payment_service
+    depends_on:
+      - payment_postgres
+      - payment_redis
+    networks:
+      - payment_network
+      - backend_network
+    environment:
+      - DB_HOST=payment_postgres
+      - DB_PORT=5432
+      - DB_USER=${PAYMENT_POSTGRES_USER:-admin}
+      - DB_PASSWORD=${PAYMENT_POSTGRES_PASSWORD:-admin}
+      - DB_NAME=${PAYMENT_POSTGRES_DB:-payment}
+      - REDIS_HOST=payment_redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${PAYMENT_REDIS_PASSWORD:-admin}
+      - GIN_MODE=release
+    profiles: ['payment', 'all']
+    restart: unless-stopped
+
+  payment_postgres:
+    image: postgres:latest
+    container_name: payment_postgres
+    environment:
+      - POSTGRES_USER=${PAYMENT_POSTGRES_USER:-admin}
+      - POSTGRES_PASSWORD=${PAYMENT_POSTGRES_PASSWORD:-admin}
+      - POSTGRES_DB=${PAYMENT_POSTGRES_DB:-payment}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    networks:
+      - payment_network
+    command: >
+      postgres -c max_connections=1000
+               -c shared_buffers=256MB
+               -c effective_cache_size=768MB
+               -c maintenance_work_mem=64MB
+               -c checkpoint_completion_target=0.7
+               -c wal_buffers=16MB
+               -c default_statistics_target=100
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${PAYMENT_POSTGRES_USER:-admin} -d ${PAYMENT_POSTGRES_DB:-payment}" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: ['payment', 'all']
+    restart: unless-stopped
+
+  payment_redis:
+    image: redis:latest
+    container_name: payment_redis
+    environment:
+      - REDIS_PASSWORD=${PAYMENT_REDIS_PASSWORD:-admin}
+      - REDIS_USER=${PAYMENT_REDIS_USER:-admin}
+      - REDIS_USER_PASSWORD=${PAYMENT_REDIS_USER_PASSWORD:-admin}
+    networks:
+      - payment_network
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${PAYMENT_REDIS_PASSWORD:-admin}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: ['payment', 'all']
+    restart: unless-stopped
+
+  # ======== BOARD SERVICE ========
+  board_service:
+    build:
+      context: ./services/board_service
+      dockerfile: Dockerfile
+    container_name: board_service
+    depends_on:
+      - board_mongo
+      - board_redis
+    networks:
+      - board_network
+      - backend_network
+    environment:
+      - MONGO_URI=mongodb://${BOARD_MONGO_USERNAME:-admin}:${BOARD_MONGO_PASSWORD:-admin}@board_mongo:27017/${BOARD_MONGO_DATABASE:-board}?authSource=admin
+      - REDIS_HOST=board_redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${BOARD_REDIS_PASSWORD:-admin}
+      - GIN_MODE=release
+    profiles: ['board', 'all']
+    restart: unless-stopped
+
+  board_mongo:
+    image: mongo:latest
+    container_name: board_mongo
+    environment:
+      - MONGO_INITDB_DATABASE=${BOARD_MONGO_DATABASE:-board}
+      - MONGO_INITDB_ROOT_USERNAME=${BOARD_MONGO_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${BOARD_MONGO_PASSWORD:-admin}
+    networks:
+      - board_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh mongodb://${BOARD_MONGO_USERNAME:-admin}:${BOARD_MONGO_PASSWORD:-admin}@localhost:27017/admin --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: ['board', 'all']
+    restart: unless-stopped
+
+  board_mongo_express:
+    image: mongo-express:latest
+    container_name: board_mongo_express
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${BOARD_MONGO_USERNAME:-admin}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${BOARD_MONGO_PASSWORD:-admin}
+      - ME_CONFIG_MONGODB_URL=mongodb://${BOARD_MONGO_USERNAME:-admin}:${BOARD_MONGO_PASSWORD:-admin}@board_mongo:27017/
+    networks:
+      - board_network
+    depends_on:
+      - board_mongo
+    profiles: ['board', 'all']
+    restart: unless-stopped
+
+  board_redis:
+    image: redis:latest
+    container_name: board_redis
+    environment:
+      - REDIS_PASSWORD=${BOARD_REDIS_PASSWORD:-admin}
+      - REDIS_USER=${BOARD_REDIS_USER:-admin}
+      - REDIS_USER_PASSWORD=${BOARD_REDIS_USER_PASSWORD:-admin}
+    networks:
+      - board_network
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${BOARD_REDIS_PASSWORD:-admin}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: ['board', 'all']
+    restart: unless-stopped
+
+  # ======== CALENDAR SERVICE ========
+  calendar_service:
+    build:
+      context: ./services/calendar_service
+      dockerfile: Dockerfile
+    container_name: calendar_service
+    depends_on:
+      - calendar_mongo
+      - calendar_redis
+    networks:
+      - calendar_network
+      - backend_network
+    environment:
+      - MONGO_URI=mongodb://${CALENDAR_MONGO_USERNAME:-admin}:${CALENDAR_MONGO_PASSWORD:-admin}@calendar_mongo:27017/${CALENDAR_MONGO_DATABASE:-calendar}?authSource=admin
+      - REDIS_HOST=calendar_redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${CALENDAR_REDIS_PASSWORD:-admin}
+      - GIN_MODE=release
+    profiles: ['calendar', 'all']
+    restart: unless-stopped
+
+  calendar_mongo:
+    image: mongo:latest
+    container_name: calendar_mongo
+    environment:
+      - MONGO_INITDB_DATABASE=${CALENDAR_MONGO_DATABASE:-calendar}
+      - MONGO_INITDB_ROOT_USERNAME=${CALENDAR_MONGO_USERNAME:-admin}
+      - MONGO_INITDB_ROOT_PASSWORD=${CALENDAR_MONGO_PASSWORD:-admin}
+    networks:
+      - calendar_network
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh mongodb://${CALENDAR_MONGO_USERNAME:-admin}:${CALENDAR_MONGO_PASSWORD:-admin}@localhost:27017/admin --quiet
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: ['calendar', 'all']
+    restart: unless-stopped
+
+  calendar_mongo_express:
+    image: mongo-express:latest
+    container_name: calendar_mongo_express
+    environment:
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=${CALENDAR_MONGO_USERNAME:-admin}
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=${CALENDAR_MONGO_PASSWORD:-admin}
+      - ME_CONFIG_MONGODB_URL=mongodb://${CALENDAR_MONGO_USERNAME:-admin}:${CALENDAR_MONGO_PASSWORD:-admin}@calendar_mongo:27017/
+    networks:
+      - calendar_network
+    depends_on:
+      - calendar_mongo
+    profiles: ['calendar', 'all']
+    restart: unless-stopped
+
+  calendar_redis:
+    image: redis:latest
+    container_name: calendar_redis
+    environment:
+      - REDIS_PASSWORD=${CALENDAR_REDIS_PASSWORD:-admin}
+      - REDIS_USER=${CALENDAR_REDIS_USER:-admin}
+      - REDIS_USER_PASSWORD=${CALENDAR_REDIS_USER_PASSWORD:-admin}
+    networks:
+      - calendar_network
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass $REDIS_PASSWORD" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user $REDIS_USER on >$REDIS_USER_PASSWORD ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${CALENDAR_REDIS_PASSWORD:-admin}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    profiles: ['calendar', 'all']
+    restart: unless-stopped
+
+networks:
+  auth_network:
+    driver: bridge
+  payment_network:
+    driver: bridge
+  board_network:
+    driver: bridge
+  calendar_network:
+    driver: bridge
+  backend_network:
+    driver: bridge

@@ -1,0 +1,12 @@
+[submodule "services/auth_service"]
+	path = services/auth_service
+	url = git@github.com:SeiFlow-3P2/auth_service.git
+[submodule "services/calendar_service"]
+	path = services/calendar_service
+	url = git@github.com:SeiFlow-3P2/calendar_service.git
+[submodule "services/board_service"]
+	path = services/board_service
+	url = git@github.com:SeiFlow-3P2/board_service.git
+[submodule "services/payment_service"]
+	path = services/payment_service
+	url = git@github.com:SeiFlow-3P2/payment_service.git
