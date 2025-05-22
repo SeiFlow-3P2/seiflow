@@ -1,0 +1,6 @@
+include:
+  - services/auth.yml
+  - services/payment.yml
+  - services/board.yml
+  - services/calendar.yml
+  - services/kafka.yml
