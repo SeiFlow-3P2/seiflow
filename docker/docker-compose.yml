@@ -3,4 +3,5 @@ include:
   - services/payment.yml
   - services/board.yml
   - services/calendar.yml
+  - services/jaeger.yml
   - services/kafka.yml
