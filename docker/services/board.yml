@@ -71,14 +71,6 @@ services:
       - board_redis_data:/data
     networks:
       - board_net
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
     command: >
       redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
     healthcheck:

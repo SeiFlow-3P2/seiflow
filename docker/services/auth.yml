@@ -51,14 +51,6 @@ services:
       - auth_postgres_data:/var/lib/postgresql/data/pgdata
     networks:
       - auth_net
-    deploy:
-      resources:
-        limits:
-          cpus: '0.50'
-          memory: 512M
-        reservations:
-          cpus: '0.25'
-          memory: 256M
     command: >
       postgres -c max_connections=1000
                -c shared_buffers=256MB
