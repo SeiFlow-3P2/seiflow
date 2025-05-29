@@ -6,8 +6,6 @@ networks:
     driver: bridge
 
 volumes:
-  calendar_mongo_data:
-    driver: local
   calendar_redis_data:
     driver: local
 
@@ -21,8 +19,6 @@ services:
       - calendar_net
       - backend
     depends_on:
-      calendar_mongo:
-        condition: service_healthy
       calendar_redis:
         condition: service_healthy
     environment:
@@ -35,27 +31,6 @@ services:
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     restart: unless-stopped
-
-  calendar_mongo:
-    image: mongo:4.4
-    container_name: calendar_mongo
-    restart: unless-stopped
-    environment:
-      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
-      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-    volumes:
-      - calendar_mongo_data:/data/db
-    ports:
-      - "${CALENDAR_MONGO_PORT}:27017"
-    networks:
-      - calendar_net
-    healthcheck:
-      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
 
   calendar_redis:
     image: redis:latest
@@ -80,22 +55,3 @@ services:
       retries: 5
     tty: true
     stdin_open: true
-
-  calendar_mongo_express:
-    image: mongo-express:0.54
-    container_name: calendar_mongo_express
-    restart: unless-stopped
-    ports:
-      - "${CALENDAR_MONGO_EXPRESS_PORT}:8081"
-    environment:
-      - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-      - ME_CONFIG_MONGODB_PORT=27017
-      - ME_CONFIG_MONGODB_SERVER=mongo
-      - ME_CONFIG_BASICAUTH_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
-      - ME_CONFIG_BASICAUTH_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
-    networks:
-      - calendar_net
-    depends_on:
-      calendar_mongo:
-        condition: service_healthy
