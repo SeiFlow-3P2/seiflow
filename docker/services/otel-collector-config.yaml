@@ -2,16 +2,39 @@ receivers:
   otlp:
     protocols:
       grpc:
-      http:
+      http
 
 exporters:
   jaeger:
-    endpoint: jaeger:14250
+    endpoint: "http://jaeger:14250"
     tls:
       insecure: true
+
+  prometheus:
+    endpoint: "0.0.0.0:9089" #еще не точно
+
+processors:
+  memory_limiter:
+    check_interval: 5s
+    limit_mib: 400
+    spike_limit_mib: 100
+
+  batch:
+
+  resource:
+    attributes:
+      - action: insert
+        key: service.namespace
+        value: "services"
 
 service:
   pipelines:
     traces:
       receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
       exporters: [jaeger]
+
+    metrics:
+      receivers: [otlp]
+      processors: [memory_limiter, resource, batch]
+      exporters: [prometheus]
