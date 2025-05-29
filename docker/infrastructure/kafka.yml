@@ -142,3 +142,20 @@ services:
       - "${KAFKA_UI_PORT}:8080"
     networks:
       - kafka_internal
+
+  kafka_init:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka_init
+    depends_on:
+      kafka_broker_1:
+        condition: service_healthy
+      kafka_broker_2:
+        condition: service_healthy
+      kafka_broker_3:
+        condition: service_healthy
+    networks:
+      - kafka_internal
+    volumes:
+      - ../scripts/init-topics.sh:/init-topics.sh
+    entrypoint: ["/bin/bash", "/init-topics.sh"]
+    restart: "no"
