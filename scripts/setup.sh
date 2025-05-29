@@ -4,7 +4,6 @@ set -e
 
 echo "🚀 Настройка проекта SeiFlow..."
 
-# Проверка зависимостей
 check_dependencies() {
     echo "🔍 Проверка зависимостей..."
     
@@ -26,7 +25,6 @@ check_dependencies() {
     echo "✅ Все зависимости установлены"
 }
 
-# Создание .env файла
 setup_env() {
     echo "⚙️  Настройка переменных окружения..."
     
@@ -34,12 +32,10 @@ setup_env() {
         cp .env.example .env
         echo "📝 Создан .env файл из .env.example"
         
-        # Генерация безопасных паролей
         POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
         REDIS_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
         MONGO_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
         
-        # Замена паролей в .env
         sed -i.bak "s/your_secure_password_123/$POSTGRES_PASSWORD/g" .env
         sed -i.bak "s/redis_secure_password_123/$REDIS_PASSWORD/g" .env
         sed -i.bak "s/mongo_secure_password_123/$MONGO_PASSWORD/g" .env
@@ -53,27 +49,20 @@ setup_env() {
     fi
 }
 
-# Создание директорий
 create_directories() {
     echo "📁 Создание необходимых директорий..."
     
-    # Директории для данных
     mkdir -p data/{auth_service,payment_service,board_service,calendar_service}/{postgres,redis,mongo}
     mkdir -p data/kafka/{zookeeper/{data,log},broker-1,broker-2,broker-3}
     
-    # Директории для конфигов
     mkdir -p configs/{nginx/{sites-enabled,ssl,logs},ssl/{certs,webroot,letsencrypt}}
     
-    # Директории для логов
     mkdir -p logs/{nginx,services}
     
-    # Директории для резервных копий
     mkdir -p backups
     
     echo "✅ Директории созданы"
 }
-
-# Инициализация submodules
 setup_submodules() {
     echo "📦 Инициализация submodules..."
     
@@ -85,62 +74,10 @@ setup_submodules() {
     fi
 }
 
-# Создание необходимых файлов
-create_config_files() {
-    echo "📝 Создание конфигурационных файлов..."
-    
-    # Создание proxy_params если не существует
-    if [ ! -f "configs/nginx/proxy_params" ]; then
-        cat > configs/nginx/proxy_params << 'EOF'
-proxy_set_header Host $host;
-proxy_set_header X-Real-IP $remote_addr;
-proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-proxy_set_header X-Forwarded-Proto $scheme;
-proxy_set_header X-Forwarded-Host $host;
-proxy_set_header X-Forwarded-Port $server_port;
-
-proxy_connect_timeout 60s;
-proxy_send_timeout 60s;
-proxy_read_timeout 60s;
-
-proxy_buffer_size 4k;
-proxy_buffers 8 4k;
-proxy_busy_buffers_size 8k;
-
-proxy_buffering off;
-proxy_http_version 1.1;
-proxy_set_header Connection "";
-proxy_redirect off;
-EOF
-        echo "✅ Создан configs/nginx/proxy_params"
-    fi
-    
-    # Создание .dockerignore
-    if [ ! -f ".dockerignore" ]; then
-        cat > .dockerignore << 'EOF'
-.git
-.gitignore
-README.md
-.env
-.env.*
-!.env.example
-node_modules
-data/
-logs/
-backups/
-.idea/
-.vscode/
-*.log
-EOF
-        echo "✅ Создан .dockerignore"
-    fi
-}
-
-# Проверка доступности портов
 check_ports() {
     echo "🔍 Проверка доступности портов..."
     
-    PORTS=(80 443 5431 5430 6381 6380 6383 6384 8000 8001 8002 8003 8081 8082 8080 9092 9093 9094 2181 8085 8086 27017 27018)
+    PORTS=(80 443 5431 5430 6381 6380 6383 6384 8000 8001 8002 8003 8081 8082 8080 9092 9093 9094 2181 8085 8086 16686 9090 3000 27017 27018)
     
     for port in "${PORTS[@]}"; do
         if ss -tulwn | grep ":$port " > /dev/null 2>&1; then
@@ -151,7 +88,6 @@ check_ports() {
     echo "✅ Проверка портов завершена"
 }
 
-# Основная функция установки
 main() {
     echo "================================================"
     echo "🎯 Установка SeiFlow"
@@ -161,7 +97,6 @@ main() {
     setup_env
     create_directories
     setup_submodules
-    create_config_files
     check_ports
     
     echo ""
@@ -181,10 +116,10 @@ main() {
     echo "   make logs           - просмотр логов"
     echo ""
     echo "🌐 После запуска доступно:"
-    echo "   Фронтенд:     http://localhost:8080"
-    echo "   Kafka UI:     http://localhost:8086"
-    echo "   Board DB:     http://localhost:8082"
-    echo "   Calendar DB:  http://localhost:8081"
+    echo "   Grafana:     http://localhost:3000"
+    echo "   Prometheus:  http://localhost:9090"
+    echo "   Jaeger:      http://localhost:16686"
+    echo "   Kafka UI:    http://localhost:8086"
     echo ""
 }
 

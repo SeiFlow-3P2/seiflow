@@ -16,7 +16,8 @@ services:
 
 networks:
   backend:
-    driver: bridge
+    external: true
+    name: seiflow_backend
 
 volumes:
   config-data:

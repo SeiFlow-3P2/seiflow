@@ -2,7 +2,8 @@ networks:
   auth_net:
     driver: bridge
   backend:
-    driver: bridge
+    external: true
+    name: seiflow_backend
 
 volumes:
   auth_postgres_data:
@@ -12,10 +13,12 @@ volumes:
 
 services:
   auth_service:
-    build: ./services/auth_service
+    build: 
+      context: ../../services/auth_service
+      dockerfile: Dockerfile
     container_name: auth_service
     ports:
-      - "${AUTH_SERVICE_PORT}:8000"
+      - "${AUTH_SERVICE_PORT}:8093"
     networks:
       - auth_net
       - backend
@@ -25,67 +28,51 @@ services:
       auth_redis:
         condition: service_healthy
     environment:
-      - DB_HOST=auth_postgres
-      - DB_PORT=5432
-      - DB_USER=${POSTGRES_USER}
-      - DB_PASSWORD=${POSTGRES_PASSWORD}
-      - DB_NAME=${POSTGRES_DB}
-      - REDIS_HOST=auth_redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      DB_HOST: auth_postgres
+      DB_PORT: 5432
+      DB_USER: ${AUTH_POSTGRES_USER}
+      DB_PASSWORD: ${AUTH_POSTGRES_PASSWORD}
+      DB_NAME: ${AUTH_POSTGRES_DB}
+      REDIS_HOST: auth_redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
     restart: unless-stopped
 
   auth_postgres:
-    image: postgres:latest
+    image: postgres:15-alpine
     container_name: auth_postgres
     restart: unless-stopped
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - PGDATA=${PGDATA}
+      POSTGRES_USER: ${AUTH_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AUTH_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${AUTH_POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data
     ports:
       - "${AUTH_POSTGRES_PORT}:5432"
     volumes:
-      - auth_postgres_data:/var/lib/postgresql/data/pgdata
+      - auth_postgres_data:/var/lib/postgresql/data
     networks:
       - auth_net
-    command: >
-      postgres -c max_connections=1000
-               -c shared_buffers=256MB
-               -c effective_cache_size=768MB
-               -c maintenance_work_mem=64MB
-               -c checkpoint_completion_target=0.7
-               -c wal_buffers=16MB
-               -c default_statistics_target=100
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres_user} -d ${POSTGRES_DB:-postgres_db}"]
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_POSTGRES_USER} -d ${AUTH_POSTGRES_DB}"]
       interval: 30s
       timeout: 10s
       retries: 5
-    tty: true
-    stdin_open: true
+      start_period: 40s
 
   auth_redis:
-    image: redis:latest
+    image: redis:7-alpine
     container_name: auth_redis
     restart: unless-stopped
-    environment:
-      - REDIS_PASSWORD=${REDIS_PASSWORD}
-      - REDIS_USER=${REDIS_USER}
-      - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
     ports:
       - "${AUTH_REDIS_PORT}:6379"
     volumes:
       - auth_redis_data:/data
     networks:
       - auth_net
-    command: >
-      redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+    command: redis-server --requirepass ${AUTH_REDIS_PASSWORD}
     healthcheck:
-      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      test: ["CMD", "redis-cli", "-a", "${AUTH_REDIS_PASSWORD}", "ping"]
       interval: 30s
       timeout: 10s
       retries: 5
-    tty: true
-    stdin_open: true

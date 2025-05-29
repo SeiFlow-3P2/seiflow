@@ -5,7 +5,7 @@ receivers:
       http:
 
 exporters:
-  jaeger:
+  otlp:
     endpoint: "http://jaeger:14250"
     tls:
       insecure: true
@@ -32,7 +32,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [memory_limiter, resource, batch]
-      exporters: [jaeger]
+      exporters: [otlp]
 
     metrics:
       receivers: [otlp]

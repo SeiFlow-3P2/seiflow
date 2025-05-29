@@ -1,32 +1,89 @@
 global:
   scrape_interval: 15s
   evaluation_interval: 15s
+  external_labels:
+    cluster: 'seiflow'
+    environment: 'development'
 
 scrape_configs:
+  # Сам Prometheus
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # OpenTelemetry Collector
   - job_name: 'otel-collector'
     static_configs:
+      - targets: ['otel-collector:8888']
       - targets: ['otel-collector:8889']
 
+  # Микросервисы
   - job_name: 'auth-service'
     static_configs:
-      - targets: ['auth_service:8000']
+      - targets: ['auth_service:8093']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
   - job_name: 'payment-service'
     static_configs:
-      - targets: ['payment_service:8000']
+      - targets: ['payment_service:8091']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
   - job_name: 'board-service'
     static_configs:
-      - targets: ['board_service:8000']
+      - targets: ['board_service:8090']
     metrics_path: '/metrics'
     scrape_interval: 30s
 
   - job_name: 'calendar-service'
     static_configs:
-      - targets: ['calendar_service:8000']
+      - targets: ['calendar_service:8092']
     metrics_path: '/metrics'
     scrape_interval: 30s
+
+  - job_name: 'api-gateway'
+    static_configs:
+      - targets: ['api-gateway:8080']
+    metrics_path: '/metrics'
+    scrape_interval: 30s
+
+  # Базы данных
+  - job_name: 'postgres-auth'
+    static_configs:
+      - targets: ['auth_postgres:5432']
+    metrics_path: '/metrics'
+
+  - job_name: 'postgres-payment'
+    static_configs:
+      - targets: ['payment_postgres:5432']
+    metrics_path: '/metrics'
+
+  - job_name: 'mongodb-board'
+    static_configs:
+      - targets: ['board_mongo:27017']
+    metrics_path: '/metrics'
+
+  - job_name: 'mongodb-calendar'
+    static_configs:
+      - targets: ['calendar_mongo:27017']
+    metrics_path: '/metrics'
+
+  # Redis инстансы
+  - job_name: 'redis'
+    static_configs:
+      - targets: 
+        - 'auth_redis:6379'
+        - 'payment_redis:6379'
+        - 'board_redis:6379'
+        - 'calendar_redis:6379'
+    metrics_path: '/metrics'
+
+  # Kafka
+  - job_name: 'kafka'
+    static_configs:
+      - targets: 
+        - 'kafka_broker_1:9092'
+        - 'kafka_broker_2:9093'
+        - 'kafka_broker_3:9094'
+    metrics_path: '/metrics'
