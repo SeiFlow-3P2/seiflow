@@ -1,0 +1,144 @@
+networks:
+  kafka_internal:
+    driver: bridge
+  backend:
+    external: true
+    name: seiflow_backend
+
+volumes:
+  kafka_data_1:
+    driver: local
+  kafka_data_2:
+    driver: local
+  kafka_data_3:
+    driver: local
+  zookeeper_data:
+    driver: local
+
+services:
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    restart: unless-stopped
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_data:/var/lib/zookeeper/log
+    ports:
+      - "${ZOOKEEPER_PORT}:2181"
+    networks:
+      - kafka_internal
+    healthcheck:
+      test: nc -z localhost 2181 || exit 1
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  kafka_broker_1:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka_broker_1
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_1:29092,PLAINTEXT_HOST://localhost:${KAFKA_BROKER_1_PORT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LOG_RETENTION_HOURS: 168
+    ports:
+      - "${KAFKA_BROKER_1_PORT}:${KAFKA_BROKER_1_PORT}"
+    volumes:
+      - kafka_data_1:/var/lib/kafka/data
+    networks:
+      - kafka_internal
+      - backend
+    healthcheck:
+      test: kafka-topics --bootstrap-server localhost:${KAFKA_BROKER_1_PORT} --list
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  kafka_broker_2:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka_broker_2
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 2
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_2:29093,PLAINTEXT_HOST://localhost:${KAFKA_BROKER_2_PORT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LOG_RETENTION_HOURS: 168
+    ports:
+      - "${KAFKA_BROKER_2_PORT}:${KAFKA_BROKER_2_PORT}"
+    volumes:
+      - kafka_data_2:/var/lib/kafka/data
+    networks:
+      - kafka_internal
+      - backend
+    healthcheck:
+      test: kafka-topics --bootstrap-server localhost:${KAFKA_BROKER_2_PORT} --list
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  kafka_broker_3:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka_broker_3
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 3
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka_broker_3:29094,PLAINTEXT_HOST://localhost:${KAFKA_BROKER_3_PORT}
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 3
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
+      KAFKA_LOG_RETENTION_HOURS: 168
+    ports:
+      - "${KAFKA_BROKER_3_PORT}:${KAFKA_BROKER_3_PORT}"
+    volumes:
+      - kafka_data_3:/var/lib/kafka/data
+    networks:
+      - kafka_internal
+      - backend
+    healthcheck:
+      test: kafka-topics --bootstrap-server localhost:${KAFKA_BROKER_3_PORT} --list
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  kafka_ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka_ui
+    restart: unless-stopped
+    depends_on:
+      kafka_broker_1:
+        condition: service_healthy
+      kafka_broker_2:
+        condition: service_healthy
+      kafka_broker_3:
+        condition: service_healthy
+    environment:
+      KAFKA_CLUSTERS_0_NAME: seiflow-cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka_broker_1:29092,kafka_broker_2:29093,kafka_broker_3:29094
+      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+    ports:
+      - "${KAFKA_UI_PORT}:8080"
+    networks:
+      - kafka_internal

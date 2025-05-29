@@ -1,79 +1,161 @@
-.PHONY: help up-auth up-payment up-board up-kafka up-all down logs
+.PHONY: help up down ps logs clean
 
-DOCKER_DIR = docker
-ENV_FILE = --env-file ../.env
+# Цвета для красивого вывода
+GREEN := \033[0;32m
+YELLOW := \033[0;33m
+RED := \033[0;31m
+NC := \033[0m
 
-help: ## Показать справку
-	@echo "Доступные команды:"
-	@echo "  up-auth      - Запустить auth сервис"
-	@echo "  up-payment   - Запустить payment сервис"
-	@echo "  up-board     - Запустить board сервис"
-	@echo "  up-calendar  - Запустить calendar сервис"
-	@echo "  up-kafka     - Запустить Kafka кластер"
-	@echo "  up-backend   - Запустить только backend сервисы"
-	@echo "  up-all       - Запустить все сервисы"
-	@echo "  down         - Остановить все сервисы"
-	@echo "  logs         - Показать логи"
-	@echo "  ps           - Показать статус контейнеров"
+# Переменные
+COMPOSE_CMD = docker compose --env-file .env
+NETWORK_NAME = seiflow_backend
 
-up-auth: ## Запустить auth сервис
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) up auth_service auth_postgres -d
+help: ## Показать эту справку
+	@echo "$(GREEN)Доступные команды:$(NC)"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  $(YELLOW)%-15s$(NC) %s\n", $$1, $$2}'
 
-up-payment: ## Запустить payment сервис
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) up payment_service payment_postgres -d
+# === УПРАВЛЕНИЕ СЕТЬЮ ===
+network: ## Создать общую сеть
+	@docker network create $(NETWORK_NAME) 2>/dev/null || echo "$(YELLOW)Сеть $(NETWORK_NAME) уже существует$(NC)"
 
-up-board: ## Запустить board сервис
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) up board_service board_mongo board_redis board_mongo_express -d
+# === ЗАПУСК СЕРВИСОВ ===
+auth: network ## Запустить Auth сервис
+	@echo "$(GREEN)🚀 Запускаю Auth сервис...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/auth-service.yml up -d
+	@echo "$(GREEN)✅ Auth сервис запущен$(NC)"
 
-up-kafka: ## Запустить Kafka кластер
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) up zookeeper kafka_broker_1 kafka_broker_2 kafka_broker_3 schema_registry kafka_ui -d
-	@echo "Создание топиков..."
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) run --rm kafka_topics_setup
+payment: network ## Запустить Payment сервис
+	@echo "$(GREEN)🚀 Запускаю Payment сервис...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/payment-service.yml up -d
+	@echo "$(GREEN)✅ Payment сервис запущен$(NC)"
 
-up-calendar: ## Запустить calendar сервис
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) up calendar_service calendar_mongo calendar_redis calendar_mongo_express -d
+board: network ## Запустить Board сервис
+	@echo "$(GREEN)🚀 Запускаю Board сервис...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/board-service.yml up -d
+	@echo "$(GREEN)✅ Board сервис запущен$(NC)"
 
-up-backend: ## Запустить только backend сервисы
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) up auth_service auth_postgres payment_service payment_postgres board_service board_mongo board_redis calendar_service calendar_mongo calendar_redis -d
+calendar: network ## Запустить Calendar сервис
+	@echo "$(GREEN)🚀 Запускаю Calendar сервис...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/calendar-service.yml up -d
+	@echo "$(GREEN)✅ Calendar сервис запущен$(NC)"
 
-up-all: ## Запустить все сервисы
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) up -d
+gateway: network ## Запустить API Gateway
+	@echo "$(GREEN)🚀 Запускаю API Gateway...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/api-gateway.yml up -d
+	@echo "$(GREEN)✅ API Gateway запущен$(NC)"
 
+kafka: network ## Запустить Kafka
+	@echo "$(GREEN)🚀 Запускаю Kafka...$(NC)"
+	@$(COMPOSE_CMD) -f docker/infrastructure/kafka.yml up -d
+	@echo "$(GREEN)✅ Kafka запущена$(NC)"
+
+monitoring: network ## Запустить мониторинг
+	@echo "$(GREEN)🚀 Запускаю мониторинг...$(NC)"
+	@$(COMPOSE_CMD) -f docker/infrastructure/monitoring.yml up -d
+	@echo "$(GREEN)✅ Мониторинг запущен$(NC)"
+
+# === ЗАПУСК ВСЕГО ===
+up: network ## Запустить все сервисы
+	@echo "$(GREEN)🚀 Запускаю все сервисы...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/auth-service.yml \
+		-f docker/services/payment-service.yml \
+		-f docker/services/board-service.yml \
+		-f docker/services/calendar-service.yml \
+		-f docker/services/api-gateway.yml \
+		-f docker/infrastructure/kafka.yml \
+		-f docker/infrastructure/monitoring.yml \
+		up -d
+	@echo "$(GREEN)✅ Все сервисы запущены!$(NC)"
+	@echo ""
+	@echo "$(YELLOW)📋 Доступные URL:$(NC)"
+	@echo "  • API Gateway:     http://localhost:8080"
+	@echo "  • Kafka UI:        http://localhost:8086"
+	@echo "  • Board Mongo:     http://localhost:8081"
+	@echo "  • Calendar Mongo:  http://localhost:8083"
+	@echo "  • Grafana:         http://localhost:3000"
+	@echo "  • Prometheus:      http://localhost:9090"
+	@echo "  • Jaeger:          http://localhost:16686"
+
+# === ОСТАНОВКА СЕРВИСОВ ===
 down: ## Остановить все сервисы
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) down
+	@echo "$(RED)⏹️  Останавливаю все сервисы...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/auth-service.yml \
+		-f docker/services/payment-service.yml \
+		-f docker/services/board-service.yml \
+		-f docker/services/calendar-service.yml \
+		-f docker/services/api-gateway.yml \
+		-f docker/infrastructure/kafka.yml \
+		-f docker/infrastructure/monitoring.yml \
+		down
+	@echo "$(GREEN)✅ Все сервисы остановлены$(NC)"
 
-logs: ## Показать логи
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) logs -f
-
-logs-auth: ## Логи auth сервиса
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) logs -f auth_service
-
-logs-payment: ## Логи payment сервиса
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) logs -f payment_service
-
-logs-board: ## Логи board сервиса
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) logs -f board_service
-
-logs-calendar: ## Логи calendar сервиса
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) logs -f calendar_service
-
-logs-kafka: ## Логи Kafka
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) logs -f kafka_broker_1 kafka_broker_2 kafka_broker_3
-
+# === СТАТУС И ЛОГИ ===
 ps: ## Показать статус контейнеров
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) ps
+	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
-kafka-topics: ## Создать Kafka топики
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) run --rm kafka_topics_setup
+logs: ## Показать логи всех сервисов
+	@$(COMPOSE_CMD) -f docker/services/auth-service.yml \
+		-f docker/services/payment-service.yml \
+		-f docker/services/board-service.yml \
+		-f docker/services/calendar-service.yml \
+		-f docker/services/api-gateway.yml \
+		logs -f
 
-restart: ## Перезапустить все сервисы
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) restart
+logs-auth: ## Логи Auth сервиса
+	@$(COMPOSE_CMD) -f docker/services/auth-service.yml logs -f
 
+logs-payment: ## Логи Payment сервиса
+	@$(COMPOSE_CMD) -f docker/services/payment-service.yml logs -f
+
+logs-board: ## Логи Board сервиса
+	@$(COMPOSE_CMD) -f docker/services/board-service.yml logs -f
+
+logs-calendar: ## Логи Calendar сервиса
+	@$(COMPOSE_CMD) -f docker/services/calendar-service.yml logs -f
+
+logs-gateway: ## Логи API Gateway
+	@$(COMPOSE_CMD) -f docker/services/api-gateway.yml logs -f
+
+# === ОЧИСТКА ===
 clean: ## Удалить все контейнеры и volumes
-	cd $(DOCKER_DIR) && docker compose $(ENV_FILE) down -v
-	docker system prune -f
+	@echo "$(RED)🗑️  Удаляю все контейнеры и данные...$(NC)"
+	@docker compose down -v --remove-orphans
+	@docker network rm $(NETWORK_NAME) 2>/dev/null || true
+	@echo "$(GREEN)✅ Очистка завершена$(NC)"
 
-clean-db: ## Удалить только volumes с базами данных
-	@echo "⚠️  Это удалит ВСЕ данные из баз!"
-	@read -p "Продолжить? (y/N): " confirm && [ "$confirm" = "y" ]
-	docker volume rm docker_auth_postgres_data docker_payment_postgres_data docker_board_mongo_data docker_auth_redis_data docker_payment_redis_data docker_board_redis_data 2>/dev/null || true
+restart: down up ## Перезапустить все сервисы
+
+# === БЫСТРЫЕ КОМАНДЫ ===
+dev: auth board calendar payment gateway ## Запустить только сервисы (без kafka и мониторинга)
+	@echo "$(GREEN)✅ Сервисы для разработки запущены$(NC)"
+
+stop-auth: ## Остановить Auth сервис
+	@$(COMPOSE_CMD) -f docker/services/auth-service.yml down
+
+stop-payment: ## Остановить Payment сервис
+	@$(COMPOSE_CMD) -f docker/services/payment-service.yml down
+
+stop-board: ## Остановить Board сервис
+	@$(COMPOSE_CMD) -f docker/services/board-service.yml down
+
+stop-calendar: ## Остановить Calendar сервис
+	@$(COMPOSE_CMD) -f docker/services/calendar-service.yml down
+
+# === ПРОВЕРКА ЗДОРОВЬЯ ===
+health: ## Проверить здоровье сервисов
+	@echo "$(YELLOW)🏥 Проверка здоровья сервисов...$(NC)"
+	@echo ""
+	@docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(auth|payment|board|calendar|gateway)" || echo "$(RED)Сервисы не запущены$(NC)"
+
+# === ИНИЦИАЛИЗАЦИЯ ===
+init: ## Первичная настройка проекта
+	@echo "$(GREEN)🔧 Инициализация проекта...$(NC)"
+	@if [ ! -f .env ]; then \
+		cp .env.example .env; \
+		echo "$(GREEN)✅ Создан файл .env$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠️  Файл .env уже существует$(NC)"; \
+	fi
+	@$(MAKE) network
+	@echo "$(GREEN)✅ Проект готов к работе!$(NC)"
+	@echo "$(YELLOW)Используйте 'make up' для запуска всех сервисов$(NC)"

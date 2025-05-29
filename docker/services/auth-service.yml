@@ -1,0 +1,78 @@
+networks:
+  auth_net:
+    driver: bridge
+  backend:
+    external: true
+    name: seiflow_backend
+
+volumes:
+  auth_postgres_data:
+    driver: local
+  auth_redis_data:
+    driver: local
+
+services:
+  auth_service:
+    build: 
+      context: ../../services/auth_service
+      dockerfile: Dockerfile
+    container_name: auth_service
+    ports:
+      - "${AUTH_SERVICE_PORT}:8093"
+    networks:
+      - auth_net
+      - backend
+    depends_on:
+      auth_postgres:
+        condition: service_healthy
+      auth_redis:
+        condition: service_healthy
+    environment:
+      DB_HOST: auth_postgres
+      DB_PORT: 5432
+      DB_USER: ${AUTH_POSTGRES_USER}
+      DB_PASSWORD: ${AUTH_POSTGRES_PASSWORD}
+      DB_NAME: ${AUTH_POSTGRES_DB}
+      REDIS_HOST: auth_redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+    restart: unless-stopped
+
+  auth_postgres:
+    image: postgres:15-alpine
+    container_name: auth_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${AUTH_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${AUTH_POSTGRES_PASSWORD}
+      POSTGRES_DB: ${AUTH_POSTGRES_DB}
+      PGDATA: /var/lib/postgresql/data
+    ports:
+      - "${AUTH_POSTGRES_PORT}:5432"
+    volumes:
+      - auth_postgres_data:/var/lib/postgresql/data
+    networks:
+      - auth_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${AUTH_POSTGRES_USER} -d ${AUTH_POSTGRES_DB}"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  auth_redis:
+    image: redis:7-alpine
+    container_name: auth_redis
+    restart: unless-stopped
+    ports:
+      - "${AUTH_REDIS_PORT}:6379"
+    volumes:
+      - auth_redis_data:/data
+    networks:
+      - auth_net
+    command: redis-server --requirepass ${AUTH_REDIS_PASSWORD}
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${AUTH_REDIS_PASSWORD}", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5

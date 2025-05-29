@@ -8,16 +8,13 @@ on:
 env:
   ENVIRONMENT: development
   REGISTRY: ghcr.io
-  
+
 jobs:
   deploy-dev:
     runs-on: ubuntu-latest
     environment: development
     
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
     - name: Setup deployment environment
       run: |
         echo "Setting up development deployment..."
