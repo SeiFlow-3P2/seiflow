@@ -1,0 +1,116 @@
+services:
+  board_service:
+    build: ../../services/board_service
+    container_name: board_service
+    ports:
+      - "${BOARD_SERVICE_PORT}:9090"
+    networks:
+      - board_net
+      - backend
+    depends_on:
+      board_mongo:
+        condition: service_healthy
+      board_redis:
+        condition: service_healthy
+    environment:
+      REDIS_PASSWORD: ${BOARD_REDIS_PASSWORD}
+      REDIS_USER: ${BOARD_REDIS_USER}
+      REDIS_USER_PASSWORD: ${BOARD_REDIS_USER_PASSWORD}
+      MONGO_INITDB_DATABASE: ${BOARD_MONGO_DATABASE}
+      ME_CONFIG_MONGODB_URL: mongodb://${BOARD_MONGO_ROOT_USERNAME}:${BOARD_MONGO_ROOT_PASSWORD}@board_mongo:27017/
+    restart: unless-stopped
+
+  board_mongo:
+    image: mongo:latest
+    container_name: board_mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${BOARD_MONGO_ROOT_USERNAME}
+      MONGO_INITDB_ROOT_PASSWORD: ${BOARD_MONGO_ROOT_PASSWORD}
+    volumes:
+      - board_mongo_data:/data/db
+    ports:
+      - "${BOARD_MONGO_PORT}:27017"
+    networks:
+      - board_net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')", "--quiet"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+  board_redis:
+    image: redis:latest
+    container_name: board_redis
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${BOARD_REDIS_PASSWORD}
+      REDIS_USER: ${BOARD_REDIS_USER}
+      REDIS_USER_PASSWORD: ${BOARD_REDIS_USER_PASSWORD}
+    ports:
+      - "${BOARD_REDIS_PORT}:6379"
+    volumes:
+      - board_redis_data:/data
+    networks:
+      - board_net
+    command: >
+      sh -c '
+        mkdir -p /usr/local/etc/redis &&
+        echo "bind 0.0.0.0" > /usr/local/etc/redis/redis.conf &&
+        echo "requirepass ${BOARD_REDIS_PASSWORD}" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendonly yes" >> /usr/local/etc/redis/redis.conf &&
+        echo "appendfsync everysec" >> /usr/local/etc/redis/redis.conf &&
+        echo "save 900 1" >> /usr/local/etc/redis/redis.conf &&
+        echo "save 300 10" >> /usr/local/etc/redis/redis.conf &&
+        echo "save 60 10000" >> /usr/local/etc/redis/redis.conf &&
+        echo "maxmemory 256mb" >> /usr/local/etc/redis/redis.conf &&
+        echo "maxmemory-policy allkeys-lru" >> /usr/local/etc/redis/redis.conf &&
+        echo "user default on nopass ~* +@all" > /usr/local/etc/redis/users.acl &&
+        echo "user ${BOARD_REDIS_USER} on >${BOARD_REDIS_USER_PASSWORD} ~* +@all" >> /usr/local/etc/redis/users.acl &&
+        redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+      '
+    healthcheck:
+      test: |
+        redis-cli -a "${BOARD_REDIS_PASSWORD}" ping || 
+        redis-cli --no-auth-warning -a "${BOARD_REDIS_PASSWORD}" ping ||
+        redis-cli ping
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    tty: true
+    stdin_open: true
+
+  board_mongo_express:
+    image: mongo-express:latest
+    container_name: board_mongo_express
+    restart: unless-stopped
+    ports:
+      - "${BOARD_MONGO_EXPRESS_PORT}:8081"
+    environment:
+      ME_CONFIG_MONGODB_URL: mongodb://${BOARD_MONGO_ROOT_USERNAME}:${BOARD_MONGO_ROOT_PASSWORD}@board_mongo:27017/
+      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME}
+      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD}
+    depends_on:
+      board_mongo:
+        condition: service_healthy
+    networks: 
+      - board_net
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://board_mongo_express:8081/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  board_net:
+    driver: bridge
+  backend:
+    driver: bridge
+
+volumes:
+  board_mongo_data:
+    driver: local
+  board_redis_data:
+    driver: local

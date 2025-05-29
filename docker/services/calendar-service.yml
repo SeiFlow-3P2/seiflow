@@ -1,4 +1,3 @@
-# Calendar создает свои ресурсы
 networks:
   calendar_net:
     driver: bridge
@@ -11,7 +10,7 @@ volumes:
 
 services:
   calendar_service:
-    build: ../../services/calendar_service
+    build: ./services/calendar_service
     container_name: calendar_service
     ports:
       - "${CALENDAR_SERVICE_PORT}:8000"
@@ -32,6 +31,30 @@ services:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     restart: unless-stopped
 
+<<<<<<< HEAD:docker/services/calendar.yml
+=======
+  calendar_mongo:
+    image: mongo:latest
+    container_name: calendar_mongo
+    restart: unless-stopped
+    environment:
+      - MONGO_INITDB_DATABASE=${MONGO_INITDB_DATABASE}
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    volumes:
+      - calendar_mongo_data:/data/db
+    ports:
+      - "${CALENDAR_MONGO_PORT}:27017"
+    networks:
+      - calendar_net
+    healthcheck:
+      test: ["CMD", "mongo", "--eval", "db.adminCommand('ping')"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+
+>>>>>>> c1981a1 (refactor docker compose):docker/services/calendar-service.yml
   calendar_redis:
     image: redis:latest
     container_name: calendar_redis

@@ -1,44 +1,43 @@
-# Auth создает свои ресурсы
 networks:
-  auth_net:
+  payment_net:
     driver: bridge
   backend:
     driver: bridge
 
 volumes:
-  auth_postgres_data:
+  payment_postgres_data:
     driver: local
-  auth_redis_data:
+  payment_redis_data:
     driver: local
 
 services:
-  auth_service:
-    build: ../../services/auth_service
-    container_name: auth_service
+  payment_service:
+    build: ./services/payment_service
+    container_name: payment_service
     ports:
-      - "${AUTH_SERVICE_PORT}:8000"
+      - "${PAYMENT_SERVICE_PORT}:8000"
     networks:
-      - auth_net
+      - payment_net
       - backend
     depends_on:
-      auth_postgres:
+      payment_postgres:
         condition: service_healthy
-      auth_redis:
+      payment_redis:
         condition: service_healthy
     environment:
-      - DB_HOST=auth_postgres
+      - DB_HOST=payment_postgres
       - DB_PORT=5432
       - DB_USER=${POSTGRES_USER}
       - DB_PASSWORD=${POSTGRES_PASSWORD}
       - DB_NAME=${POSTGRES_DB}
-      - REDIS_HOST=auth_redis
+      - REDIS_HOST=payment_redis
       - REDIS_PORT=6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     restart: unless-stopped
 
-  auth_postgres:
-    image: postgres:latest
-    container_name: auth_postgres
+  payment_postgres:
+    image: postgres:15-alpine
+    container_name: payment_postgres
     restart: unless-stopped
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
@@ -46,11 +45,11 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - PGDATA=${PGDATA}
     ports:
-      - "${AUTH_POSTGRES_PORT}:5432"
+      - "${PAYMENT_POSTGRES_PORT}:5432"
     volumes:
-      - auth_postgres_data:/var/lib/postgresql/data/pgdata
+      - payment_postgres_data:/var/lib/postgresql/data/pgdata
     networks:
-      - auth_net
+      - payment_net
     command: >
       postgres -c max_connections=1000
                -c shared_buffers=256MB
@@ -60,29 +59,38 @@ services:
                -c wal_buffers=16MB
                -c default_statistics_target=100
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres_user} -d ${POSTGRES_DB:-postgres_db}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER}"]
       interval: 30s
       timeout: 10s
       retries: 5
+      start_period: 40s
     tty: true
     stdin_open: true
 
-  auth_redis:
+  payment_redis:
     image: redis:latest
-    container_name: auth_redis
+    container_name: payment_redis
     restart: unless-stopped
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_USER=${REDIS_USER}
       - REDIS_USER_PASSWORD=${REDIS_USER_PASSWORD}
     ports:
-      - "${AUTH_REDIS_PORT}:6379"
+      - "${PAYMENT_REDIS_PORT}:6379"
     volumes:
-      - auth_redis_data:/data
+      - payment_redis_data:/data
     networks:
-      - auth_net
+      - payment_net
+    deploy:
+      resources:
+        limits:
+          cpus: '0.50'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
     command: >
-      redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
+       redis-server /usr/local/etc/redis/redis.conf --aclfile /usr/local/etc/redis/users.acl
     healthcheck:
       test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
       interval: 30s

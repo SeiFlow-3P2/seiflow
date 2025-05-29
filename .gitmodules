@@ -10,3 +10,12 @@
 [submodule "services/payment_service"]
 	path = services/payment_service
 	url = git@github.com:SeiFlow-3P2/payment_service.git
+[submodule "services/seiflow_frontend"]
+	path = services/seiflow_frontend
+	url = https://github.com/SeiFlow-3P2/seiflow_frontend.git
+[submodule "services/api_gateway"]
+	path = services/api_gateway
+	url = https://github.com/SeiFlow-3P2/api_gateway.git
+[submodule "services/notification_service"]
+	path = services/notification_service
+	url = https://github.com/SeiFlow-3P2/notification_service.git
