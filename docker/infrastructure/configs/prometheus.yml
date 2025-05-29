@@ -6,18 +6,14 @@ global:
     environment: 'development'
 
 scrape_configs:
-  # Сам Prometheus
   - job_name: 'prometheus'
     static_configs:
       - targets: ['localhost:9090']
-
-  # OpenTelemetry Collector
   - job_name: 'otel-collector'
     static_configs:
       - targets: ['otel-collector:8888']
       - targets: ['otel-collector:8889']
 
-  # Микросервисы
   - job_name: 'auth-service'
     static_configs:
       - targets: ['auth_service:8093']
@@ -48,7 +44,6 @@ scrape_configs:
     metrics_path: '/metrics'
     scrape_interval: 30s
 
-  # Базы данных
   - job_name: 'postgres-auth'
     static_configs:
       - targets: ['auth_postgres:5432']
@@ -69,7 +64,6 @@ scrape_configs:
       - targets: ['calendar_mongo:27017']
     metrics_path: '/metrics'
 
-  # Redis инстансы
   - job_name: 'redis'
     static_configs:
       - targets: 
@@ -79,7 +73,6 @@ scrape_configs:
         - 'calendar_redis:6379'
     metrics_path: '/metrics'
 
-  # Kafka
   - job_name: 'kafka'
     static_configs:
       - targets: 

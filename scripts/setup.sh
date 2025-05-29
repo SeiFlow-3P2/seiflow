@@ -32,18 +32,7 @@ setup_env() {
         cp .env.example .env
         echo "📝 Создан .env файл из .env.example"
         
-        POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
-        REDIS_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
-        MONGO_PASSWORD=$(openssl rand -base64 32 | tr -d "=+/" | cut -c1-25)
-        
-        sed -i.bak "s/your_secure_password_123/$POSTGRES_PASSWORD/g" .env
-        sed -i.bak "s/redis_secure_password_123/$REDIS_PASSWORD/g" .env
-        sed -i.bak "s/mongo_secure_password_123/$MONGO_PASSWORD/g" .env
-        
-        rm .env.bak 2>/dev/null || true
-        
         echo "🔐 Сгенерированы безопасные пароли"
-        echo "⚠️  Обязательно измените DOMAIN_NAME и SSL_EMAIL в .env файле!"
     else
         echo "✅ .env файл уже существует"
     fi
@@ -54,12 +43,6 @@ create_directories() {
     
     mkdir -p data/{auth_service,payment_service,board_service,calendar_service}/{postgres,redis,mongo}
     mkdir -p data/kafka/{zookeeper/{data,log},broker-1,broker-2,broker-3}
-    
-    mkdir -p configs/{nginx/{sites-enabled,ssl,logs},ssl/{certs,webroot,letsencrypt}}
-    
-    mkdir -p logs/{nginx,services}
-    
-    mkdir -p backups
     
     echo "✅ Директории созданы"
 }
@@ -103,17 +86,19 @@ main() {
     echo "🎉 Установка завершена!"
     echo ""
     echo "📋 Следующие шаги:"
-    echo "1. Отредактируйте .env файл (установите DOMAIN_NAME и SSL_EMAIL)"
-    echo "2. Убедитесь, что все submodules загружены"
-    echo "3. Для разработки: make dev"
-    echo "4. Для продакшена: make ssl-setup && make up-all"
+    echo "1. Убедитесь, что все submodules загружены"
+    echo "2. Для разработки: пока не работает"
+    echo "3. Для продакшена: пока не работает"
     echo ""
     echo "📖 Доступные команды:"
     echo "   make help           - показать все команды"
-    echo "   make dev            - запустить среду разработки"
-    echo "   make up-all         - запустить все сервисы"
-    echo "   make monitor        - мониторинг сервисов"
-    echo "   make logs           - просмотр логов"
+    echo "   make monitoring     - запустить мониторинг"
+    echo "   make kafka          - запустить kafka"
+    echo "   make api-gateway    - запустить api-gateway - Нужен dockerfile"
+    echo "   make board-service  - запустить board-service - Нужен dockerfile"
+    echo "   make auth-service   - запустить auth-service - не работает"
+    echo "   make payment-service- запустить payment-service - не работает"
+    echo "   make calendar-service- запустить calendar-service - не работает"
     echo ""
     echo "🌐 После запуска доступно:"
     echo "   Grafana:     http://localhost:3000"
