@@ -20,7 +20,7 @@ services:
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
     ports:
-      - "2181:2181"
+      - "${ZOOKEEPER_PORT}:2181"
     networks:
       - kafka_internal
       - backend
@@ -45,7 +45,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: true
     ports:
-      - "9092:9092"
+      - "${KAFKA_PORT}:9092"
     volumes:
       - kafka_data:/var/lib/kafka/data
     networks:
