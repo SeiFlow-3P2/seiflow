@@ -33,7 +33,7 @@ jobs:
             cd /home/${{ secrets.SERVER_USER }}
             
             if [ ! -d "seiflow/.git" ]; then
-              git clone git clone git@github.com:${{ github.repository }} seiflow
+              git clone git@github.com:${{ github.repository }} seiflow
             else
               cd seiflow
               git pull origin main
