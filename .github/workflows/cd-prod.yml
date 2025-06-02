@@ -30,9 +30,16 @@ jobs:
       - name: Deploy to server
         run: |
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
-            cd /seiflow
-            git pull origin main
+            cd /home/${{ secrets.SERVER_USER }}
+            
+            if [ ! -d "seiflow.git" ]; then
+              git clone git@github.com:${{ github.repository }} my-repo
+            else
+              cd my-repo
+              git pull origin main
+            fi
           EOF
+          
     # docker-compose up -d --build
 
     # - name: Setup production environment
