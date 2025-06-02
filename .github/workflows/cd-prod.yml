@@ -32,10 +32,10 @@ jobs:
           ssh -i ~/.ssh/id_ed25519 ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }} << 'EOF'
             cd /home/${{ secrets.SERVER_USER }}
             
-            if [ ! -d "seiflow.git" ]; then
+            if [ ! -d "seiflow/.git" ]; then
               git clone git@github.com:${{ github.repository }} my-repo
             else
-              cd my-repo
+              cd seiflow
               git pull origin main
             fi
           EOF
