@@ -73,8 +73,8 @@ jobs:
     #     echo "Setting up monitoring and alerts..."
     #     echo "✅ Monitoring configured"
         
-    - name: Notify success
-      run: |
-        echo "🎉 Production deployment successful!!"
+    # - name: Notify success
+    #   run: |
+    #     echo "🎉 Production deployment successful!!"
     # echo "🔗 Production URL: https://exemple.com"
     # echo "📊 Monitor: https://monitoring.exemple.com"    
