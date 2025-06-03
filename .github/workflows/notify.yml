@@ -1,0 +1,90 @@
+name: Telegram Notifications
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [ opened, closed, merged ]
+  workflow_run:
+    workflows: ["CI/CD"]
+    types: [ completed ]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send Push Notification
+        if: github.event_name == 'push'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          MESSAGE="🚀 *New Push*%0A%0A\
+          Repository: ${{ github.repository }}%0A\
+          Branch: ${{ github.ref_name }}%0A\
+          Pusher: ${{ github.actor }}%0A\
+          Commit: \`${{ github.event.head_commit.id }}\`%0A\
+          Message: ${{ github.event.head_commit.message }}%0A%0A\
+          [View Changes](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
+          
+          curl -s -X POST https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage \
+            -d chat_id=$TELEGRAM_CHAT_ID \
+            -d parse_mode=Markdown \
+            -d text="$MESSAGE"
+
+      - name: Send PR Notification
+        if: github.event_name == 'pull_request'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ "${{ github.event.action }}" == "opened" ]; then
+            EMOJI="📝"
+            ACTION="opened"
+          elif [ "${{ github.event.action }}" == "closed" ] && [ "${{ github.event.pull_request.merged }}" == "true" ]; then
+            EMOJI="✅"
+            ACTION="merged"
+          elif [ "${{ github.event.action }}" == "closed" ]; then
+            EMOJI="❌"
+            ACTION="closed"
+          fi
+          
+          MESSAGE="$EMOJI *Pull Request $ACTION*%0A%0A\
+          Title: ${{ github.event.pull_request.title }}%0A\
+          Author: ${{ github.event.pull_request.user.login }}%0A\
+          Branch: ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}%0A%0A\
+          [View PR](https://github.com/${{ github.repository }}/pull/${{ github.event.pull_request.number }})"
+          
+          curl -s -X POST https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage \
+            -d chat_id=$TELEGRAM_CHAT_ID \
+            -d parse_mode=Markdown \
+            -d text="$MESSAGE"
+
+      - name: Send Pipeline Status
+        if: github.event_name == 'workflow_run'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" == "success" ]; then
+            STATUS="✅ Success"
+          elif [ "${{ github.event.workflow_run.conclusion }}" == "failure" ]; then
+            STATUS="❌ Failed"
+          elif [ "${{ github.event.workflow_run.conclusion }}" == "cancelled" ]; then
+            STATUS="⚠️ Cancelled"
+          else
+            STATUS="🔄 ${{ github.event.workflow_run.conclusion }}"
+          fi
+          
+          MESSAGE="🔔 *Pipeline Update*%0A%0A\
+          Workflow: ${{ github.event.workflow_run.name }}%0A\
+          Status: $STATUS%0A\
+          Branch: ${{ github.event.workflow_run.head_branch }}%0A\
+          Duration: ${{ github.event.workflow_run.run_duration }}s%0A\
+          Triggered by: ${{ github.event.workflow_run.actor.login }}%0A%0A\
+          [View Run](https://github.com/${{ github.repository }}/actions/runs/${{ github.event.workflow_run.id }})"
+          
+          curl -s -X POST https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage \
+            -d chat_id=$TELEGRAM_CHAT_ID \
+            -d parse_mode=Markdown \
+            -d text="$MESSAGE"
