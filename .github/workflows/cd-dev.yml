@@ -22,7 +22,7 @@ jobs:
 
       - name: Update submodules
         run: |
-          git submodule update --init --recursive
+          git submodule update --remote --rebase
           git config user.name "github-actions"
           git config user.email "github-actions@github.com"
           if git diff --quiet --exit-code; then
