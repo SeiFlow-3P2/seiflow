@@ -1,0 +1,172 @@
+name: Telegram Notifications
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    types: [ opened, closed, merged ]
+  workflow_run:
+    workflows: ["CI/CD"]
+    types: [ completed ]
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Telegram Secrets
+        id: check_secrets
+        run: |
+          if [ -z "${{ secrets.TELEGRAM_TOKEN }}" ]; then
+            echo "::error::TELEGRAM_TOKEN secret is not set"
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+          elif [ -z "${{ secrets.TELEGRAM_CHAT_ID }}" ]; then
+            echo "::error::TELEGRAM_CHAT_ID secret is not set"
+            echo "has_secrets=false" >> $GITHUB_OUTPUT
+          else
+            echo "✅ Telegram secrets are configured"
+            echo "has_secrets=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Send Push Notification
+        if: github.event_name == 'push' && steps.check_secrets.outputs.has_secrets == 'true'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Экранирование специальных символов для Markdown
+          COMMIT_MESSAGE=$(echo "${{ github.event.head_commit.message }}" | sed 's/[_*[\]()~`>#+=|{}.!-]/\\&/g')
+          
+          MESSAGE="🚀 *New Push*
+          
+          📦 Repository: ${{ github.repository }}
+          🌿 Branch: ${{ github.ref_name }}
+          👤 Author: ${{ github.actor }}
+          📝 Commit: \`${{ github.event.head_commit.id }}\`
+          💬 Message: ${COMMIT_MESSAGE}
+          
+          [View Changes](https://github.com/${{ github.repository }}/commit/${{ github.sha }})"
+          
+          RESPONSE=$(curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+              \"text\": \"${MESSAGE}\",
+              \"parse_mode\": \"Markdown\",
+              \"disable_web_page_preview\": true
+            }")
+          
+          # Проверка результата
+          if echo "$RESPONSE" | grep -q '"ok":true'; then
+            echo "✅ Notification sent successfully"
+          else
+            echo "❌ Failed to send notification"
+            echo "Response: $RESPONSE"
+            exit 1
+          fi
+
+      - name: Send PR Notification
+        if: github.event_name == 'pull_request' && steps.check_secrets.outputs.has_secrets == 'true'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Определение статуса PR
+          if [ "${{ github.event.action }}" == "opened" ]; then
+            EMOJI="📝"
+            ACTION="opened"
+          elif [ "${{ github.event.action }}" == "closed" ] && [ "${{ github.event.pull_request.merged }}" == "true" ]; then
+            EMOJI="✅"
+            ACTION="merged"
+          elif [ "${{ github.event.action }}" == "closed" ]; then
+            EMOJI="❌"
+            ACTION="closed"
+          else
+            EMOJI="📋"
+            ACTION="${{ github.event.action }}"
+          fi
+          
+          # Экранирование заголовка PR
+          PR_TITLE=$(echo "${{ github.event.pull_request.title }}" | sed 's/[_*[\]()~`>#+=|{}.!-]/\\&/g')
+          
+          MESSAGE="${EMOJI} *Pull Request ${ACTION}*
+          
+          📋 Title: ${PR_TITLE}
+          👤 Author: ${{ github.event.pull_request.user.login }}
+          🔀 Branch: ${{ github.event.pull_request.head.ref }} → ${{ github.event.pull_request.base.ref }}
+          
+          [View PR #${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }})"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+              \"text\": \"${MESSAGE}\",
+              \"parse_mode\": \"Markdown\",
+              \"disable_web_page_preview\": true
+            }"
+
+      - name: Send Pipeline Status
+        if: github.event_name == 'workflow_run' && steps.check_secrets.outputs.has_secrets == 'true'
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          # Определение статуса
+          case "${{ github.event.workflow_run.conclusion }}" in
+            "success")
+              STATUS="✅ Success"
+              ;;
+            "failure")
+              STATUS="❌ Failed"
+              ;;
+            "cancelled")
+              STATUS="⚠️ Cancelled"
+              ;;
+            "skipped")
+              STATUS="⏭️ Skipped"
+              ;;
+            *)
+              STATUS="🔄 ${{ github.event.workflow_run.conclusion }}"
+              ;;
+          esac
+          
+          # Расчет длительности
+          DURATION_SECONDS=${{ github.event.workflow_run.run_duration || 0 }}
+          DURATION_MINUTES=$((DURATION_SECONDS / 60))
+          DURATION_REMAINING=$((DURATION_SECONDS % 60))
+          
+          MESSAGE="🔔 *Pipeline Update*
+          
+          📦 Workflow: ${{ github.event.workflow_run.name }}
+          📊 Status: ${STATUS}
+          🌿 Branch: ${{ github.event.workflow_run.head_branch }}
+          ⏱️ Duration: ${DURATION_MINUTES}m ${DURATION_REMAINING}s
+          👤 Triggered by: ${{ github.event.workflow_run.actor.login }}
+          
+          [View Run](${{ github.event.workflow_run.html_url }})"
+          
+          curl -s -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"chat_id\": \"${TELEGRAM_CHAT_ID}\",
+              \"text\": \"${MESSAGE}\",
+              \"parse_mode\": \"Markdown\",
+              \"disable_web_page_preview\": true
+            }"
+
+      - name: Debug Information
+        if: failure()
+        run: |
+          echo "❌ Workflow failed. Debug information:"
+          echo "Event name: ${{ github.event_name }}"
+          echo "Repository: ${{ github.repository }}"
+          echo "Actor: ${{ github.actor }}"
+          echo "Ref: ${{ github.ref }}"
+          echo ""
+          echo "To fix this issue:"
+          echo "1. Go to Settings → Secrets and variables → Actions"
+          echo "2. Add TELEGRAM_TOKEN (your bot token without 'bot' prefix)"
+          echo "3. Add TELEGRAM_CHAT_ID (your chat ID or group ID)"
+          echo ""
+          echo "Get your chat ID by sending a message to your bot and visiting:"
+          echo "https://api.telegram.org/bot<YOUR_TOKEN>/getUpdates"
