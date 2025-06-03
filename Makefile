@@ -39,6 +39,11 @@ calendar: network ## Запустить Calendar сервис
 	@$(COMPOSE_CMD) -f docker/services/calendar-service.yml up -d
 	@echo "$(GREEN)✅ Calendar сервис запущен$(NC)"
 
+notification: network ## Запустить Notification сервис
+	@echo "$(GREEN)🚀 Запускаю Notification сервис...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/notification-service.yml up -d
+	@echo "$(GREEN)✅ Notification сервис запущен$(NC)"
+
 gateway: network ## Запустить API Gateway
 	@echo "$(GREEN)🚀 Запускаю API Gateway...$(NC)"
 	@$(COMPOSE_CMD) -f docker/services/api-gateway.yml up -d

@@ -13,7 +13,7 @@ volumes:
 
 services:
   prometheus:
-    image: prom/prometheus:v2.48.0
+    image: prom/prometheus:v2.54.1
     container_name: prometheus
     ports:
       - "${PROMETHEUS_PORT}:9090"
@@ -37,7 +37,7 @@ services:
       retries: 5
 
   grafana:
-    image: grafana/grafana:10.2.3
+    image: grafana/grafana:11.3.0
     container_name: grafana
     ports:
       - "${GRAFANA_PORT}:3000"
@@ -62,7 +62,7 @@ services:
       retries: 5
 
   jaeger:
-    image: jaegertracing/all-in-one:1.53
+    image: jaegertracing/all-in-one:1.69.0
     container_name: jaeger
     ports:
       - "${JAEGER_UI_PORT}:16686"
@@ -85,7 +85,7 @@ services:
       retries: 5
 
   otel-collector:
-    image: otel/opentelemetry-collector:latest
+    image: otel/opentelemetry-collector:0.115.0
     container_name: otel_collector
     command: ["--config=/etc/otel-collector-config.yaml"]
     volumes:

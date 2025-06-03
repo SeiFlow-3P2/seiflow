@@ -17,7 +17,7 @@ volumes:
 
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
+    image: confluentinc/cp-zookeeper:7.7.1
     container_name: zookeeper
     restart: unless-stopped
     environment:
@@ -37,7 +37,7 @@ services:
       retries: 5
 
   kafka_broker_1:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.7.1
     container_name: kafka_broker_1
     depends_on:
       zookeeper:
@@ -66,7 +66,7 @@ services:
       start_period: 40s
 
   kafka_broker_2:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.7.1
     container_name: kafka_broker_2
     depends_on:
       zookeeper:
@@ -95,7 +95,7 @@ services:
       start_period: 40s
 
   kafka_broker_3:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.7.1
     container_name: kafka_broker_3
     depends_on:
       zookeeper:
@@ -124,7 +124,7 @@ services:
       start_period: 40s
 
   kafka_ui:
-    image: provectuslabs/kafka-ui:latest
+    image: provectuslabs/kafka-ui:v0.7.2
     container_name: kafka_ui
     restart: unless-stopped
     depends_on:
@@ -144,7 +144,7 @@ services:
       - kafka_internal
 
   kafka_init:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-kafka:7.7.1
     container_name: kafka_init
     depends_on:
       kafka_broker_1:

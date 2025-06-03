@@ -28,18 +28,33 @@ services:
       auth_redis:
         condition: service_healthy
     environment:
-      DB_HOST: auth_postgres
-      DB_PORT: 5432
+      GRPC_PORT: ${AUTH_SERVICE_PORT}
+      ACCESS_TOKEN_TTL: ${AUTH_ACCESS_TOKEN_TTL}
+      REFRESH_TOKEN_TTL: ${AUTH_REFRESH_TOKEN_TTL}
+      
+      DB_HOST: ${AUTH_POSTGRES_HOST}
+      DB_PORT: ${AUTH_POSTGRES_PORT}
       DB_USER: ${AUTH_POSTGRES_USER}
       DB_PASSWORD: ${AUTH_POSTGRES_PASSWORD}
       DB_NAME: ${AUTH_POSTGRES_DB}
-      REDIS_HOST: auth_redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${AUTH_REDIS_PASSWORD}
+      DB_SSLMODE: ${AUTH_POSTGRES_SSLMODE}
+
+      RD_HOST: ${AUTH_REDIS_HOST}
+      RD_PASSWORD: ${AUTH_REDIS_PASSWORD}
+      RD_ID: ${AUTH_REDIS_ID}
+      
+      GITHUB_CLIENT_ID: ${AUTH_GITHUB_CLIENT_ID}
+      GITHUB_CLIENT_SECRET: ${AUTH_GITHUB_CLIENT_SECRET}
+      GOOGLE_CLIENT_ID: ${AUTH_GOOGLE_CLIENT_ID}
+      GOOGLE_CLIENT_SECRET: ${AUTH_GOOGLE_CLIENT_SECRET}
+
+      SECRET: ${AUTH_SECRET}
+      APP_URL: ${AUTH_APP_URL}
+
     restart: unless-stopped
 
   auth_postgres:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: auth_postgres
     restart: unless-stopped
     environment:
@@ -61,7 +76,7 @@ services:
       start_period: 40s
 
   auth_redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: auth_redis
     restart: unless-stopped
     ports:
