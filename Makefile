@@ -39,6 +39,11 @@ calendar: network ## Запустить Calendar сервис
 	@$(COMPOSE_CMD) -f docker/services/calendar-service.yml up -d
 	@echo "$(GREEN)✅ Calendar сервис запущен$(NC)"
 
+notification: network ## Запустить Notification сервис
+	@echo "$(GREEN)🚀 Запускаю Notification сервис...$(NC)"
+	@$(COMPOSE_CMD) -f docker/services/notification-service.yml up -d
+	@echo "$(GREEN)✅ Notification сервис запущен$(NC)"
+
 gateway: network ## Запустить API Gateway
 	@echo "$(GREEN)🚀 Запускаю API Gateway...$(NC)"
 	@$(COMPOSE_CMD) -f docker/services/api-gateway.yml up -d
@@ -54,108 +59,27 @@ monitoring: network ## Запустить мониторинг
 	@$(COMPOSE_CMD) -f docker/infrastructure/monitoring.yml up -d
 	@echo "$(GREEN)✅ Мониторинг запущен$(NC)"
 
-# === ЗАПУСК ВСЕГО ===
+nginx: network ## Запустить nginx
+	@echo "$(GREEN)🚀 Запускаю nginx...$(NC)"
+	@$(COMPOSE_CMD) -f docker/infrastructure/nginx-service.yml up -d
+	@echo "$(GREEN)✅ nginx запущен$(NC)"
+
 up: network ## Запустить все сервисы
+	@echo "$(GREEN)🚀 Сетап приложения$(NC)"
+	./scripts/setup.sh
+	@echo "$(GREEN)🚀 Генерация SSL сертификатов...$(NC)"
+	./docker/scripts/generate-certs.sh
 	@echo "$(GREEN)🚀 Запускаю все сервисы...$(NC)"
-	@$(COMPOSE_CMD) -f docker/services/auth-service.yml \
-		-f docker/services/payment-service.yml \
-		-f docker/services/board-service.yml \
-		-f docker/services/calendar-service.yml \
-		-f docker/services/api-gateway.yml \
-		-f docker/infrastructure/kafka.yml \
-		-f docker/infrastructure/monitoring.yml \
-		up -d
-	@echo "$(GREEN)✅ Все сервисы запущены!$(NC)"
-	@echo ""
-	@echo "$(YELLOW)📋 Доступные URL:$(NC)"
-	@echo "  • API Gateway:     http://localhost:8080"
-	@echo "  • Kafka UI:        http://localhost:8086"
-	@echo "  • Board Mongo:     http://localhost:8081"
-	@echo "  • Calendar Mongo:  http://localhost:8083"
-	@echo "  • Grafana:         http://localhost:3000"
-	@echo "  • Prometheus:      http://localhost:9090"
-	@echo "  • Jaeger:          http://localhost:16686"
+	@$(COMPOSE_CMD) up -d
+	@echo "$(GREEN)✅ Все сервисы запущены$(NC)"
 
-# === ОСТАНОВКА СЕРВИСОВ ===
 down: ## Остановить все сервисы
-	@echo "$(RED)⏹️  Останавливаю все сервисы...$(NC)"
-	@$(COMPOSE_CMD) -f docker/services/auth-service.yml \
-		-f docker/services/payment-service.yml \
-		-f docker/services/board-service.yml \
-		-f docker/services/calendar-service.yml \
-		-f docker/services/api-gateway.yml \
-		-f docker/infrastructure/kafka.yml \
-		-f docker/infrastructure/monitoring.yml \
-		down
+	@echo "$(GREEN)🚀 Остановка всех сервисов...$(NC)"
+	@$(COMPOSE_CMD) down
 	@echo "$(GREEN)✅ Все сервисы остановлены$(NC)"
-
-# === СТАТУС И ЛОГИ ===
-ps: ## Показать статус контейнеров
-	@docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
-
-logs: ## Показать логи всех сервисов
-	@$(COMPOSE_CMD) -f docker/services/auth-service.yml \
-		-f docker/services/payment-service.yml \
-		-f docker/services/board-service.yml \
-		-f docker/services/calendar-service.yml \
-		-f docker/services/api-gateway.yml \
-		logs -f
-
-logs-auth: ## Логи Auth сервиса
-	@$(COMPOSE_CMD) -f docker/services/auth-service.yml logs -f
-
-logs-payment: ## Логи Payment сервиса
-	@$(COMPOSE_CMD) -f docker/services/payment-service.yml logs -f
-
-logs-board: ## Логи Board сервиса
-	@$(COMPOSE_CMD) -f docker/services/board-service.yml logs -f
-
-logs-calendar: ## Логи Calendar сервиса
-	@$(COMPOSE_CMD) -f docker/services/calendar-service.yml logs -f
-
-logs-gateway: ## Логи API Gateway
-	@$(COMPOSE_CMD) -f docker/services/api-gateway.yml logs -f
-
-# === ОЧИСТКА ===
-clean: ## Удалить все контейнеры и volumes
-	@echo "$(RED)🗑️  Удаляю все контейнеры и данные...$(NC)"
-	@docker compose down -v --remove-orphans
-	@docker network rm $(NETWORK_NAME) 2>/dev/null || true
-	@echo "$(GREEN)✅ Очистка завершена$(NC)"
-
-restart: down up ## Перезапустить все сервисы
-
-# === БЫСТРЫЕ КОМАНДЫ ===
-dev: auth board calendar payment gateway ## Запустить только сервисы (без kafka и мониторинга)
-	@echo "$(GREEN)✅ Сервисы для разработки запущены$(NC)"
-
-stop-auth: ## Остановить Auth сервис
-	@$(COMPOSE_CMD) -f docker/services/auth-service.yml down
-
-stop-payment: ## Остановить Payment сервис
-	@$(COMPOSE_CMD) -f docker/services/payment-service.yml down
-
-stop-board: ## Остановить Board сервис
-	@$(COMPOSE_CMD) -f docker/services/board-service.yml down
-
-stop-calendar: ## Остановить Calendar сервис
-	@$(COMPOSE_CMD) -f docker/services/calendar-service.yml down
 
 # === ПРОВЕРКА ЗДОРОВЬЯ ===
 health: ## Проверить здоровье сервисов
 	@echo "$(YELLOW)🏥 Проверка здоровья сервисов...$(NC)"
 	@echo ""
 	@docker ps --format "table {{.Names}}\t{{.Status}}" | grep -E "(auth|payment|board|calendar|gateway)" || echo "$(RED)Сервисы не запущены$(NC)"
-
-# === ИНИЦИАЛИЗАЦИЯ ===
-init: ## Первичная настройка проекта
-	@echo "$(GREEN)🔧 Инициализация проекта...$(NC)"
-	@if [ ! -f .env ]; then \
-		cp .env.example .env; \
-		echo "$(GREEN)✅ Создан файл .env$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠️  Файл .env уже существует$(NC)"; \
-	fi
-	@$(MAKE) network
-	@echo "$(GREEN)✅ Проект готов к работе!$(NC)"
-	@echo "$(YELLOW)Используйте 'make up' для запуска всех сервисов$(NC)"

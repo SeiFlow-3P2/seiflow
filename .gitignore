@@ -13,3 +13,6 @@ data/*/
 
 # logs
 *.log
+
+# certificates
+docker/infrastructure/certs

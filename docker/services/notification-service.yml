@@ -1,0 +1,22 @@
+networks:
+  notification_net:
+    driver: bridge
+  backend:
+    external: true
+    name: seiflow_backend
+
+services:
+  notification_service:
+    build: 
+      context: ../../services/notification_service
+      dockerfile: Dockerfile
+    container_name: notification_service
+    networks:
+      - notification_net
+      - backend
+    environment:
+      KAFKA_BROKER: ${KAFKA_BROKER}
+      KAFKA_TOPIC: ${KAFKA_TOPIC}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN}
+
+    restart: unless-stopped

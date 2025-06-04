@@ -14,6 +14,8 @@ volumes:
     driver: local
   zookeeper_data:
     driver: local
+  zookeeper_logs:
+    driver: local
 
 services:
   zookeeper:
@@ -23,9 +25,11 @@ services:
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_DATA_DIR: /var/lib/zookeeper/data
+      ZOOKEEPER_DATA_LOG_DIR: /var/lib/zookeeper/log
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_data:/var/lib/zookeeper/log
+      - zookeeper_logs:/var/lib/zookeeper/log
     ports:
       - "${ZOOKEEPER_PORT}:2181"
     networks:
