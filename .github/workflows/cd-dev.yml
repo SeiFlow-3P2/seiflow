@@ -4,7 +4,7 @@ on:
   push:
     branches: [ develop ]
   repository_dispatch:
-    types: [submodule-updated]
+    types: [update_submodules]
 
 env:
   ENVIRONMENT: development
