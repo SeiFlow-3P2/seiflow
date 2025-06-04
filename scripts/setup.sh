@@ -81,31 +81,10 @@ main() {
     create_directories
     setup_submodules
     check_ports
-    
-    echo ""
-    echo "🎉 Установка завершена!"
-    echo ""
-    echo "📋 Следующие шаги:"
-    echo "1. Убедитесь, что все submodules загружены"
-    echo "2. Для разработки: пока не работает"
-    echo "3. Для продакшена: пока не работает"
-    echo ""
-    echo "📖 Доступные команды:"
-    echo "   make help           - показать все команды"
-    echo "   make monitoring     - запустить мониторинг"
-    echo "   make kafka          - запустить kafka"
-    echo "   make api-gateway    - запустить api-gateway - Нужен dockerfile"
-    echo "   make board-service  - запустить board-service - Нужен dockerfile"
-    echo "   make auth-service   - запустить auth-service - не работает"
-    echo "   make payment-service- запустить payment-service - не работает"
-    echo "   make calendar-service- запустить calendar-service - не работает"
-    echo ""
-    echo "🌐 После запуска доступно:"
-    echo "   Grafana:     http://localhost:3000"
-    echo "   Prometheus:  http://localhost:9090"
-    echo "   Jaeger:      http://localhost:16686"
-    echo "   Kafka UI:    http://localhost:8086"
-    echo ""
+
+    echo "================================================"
+    echo "🎯 Установка SeiFlow" завершена
+    echo "================================================"
 }
 
 main "$@"

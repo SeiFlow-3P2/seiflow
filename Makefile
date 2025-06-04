@@ -65,6 +65,8 @@ nginx: network ## Запустить nginx
 	@echo "$(GREEN)✅ nginx запущен$(NC)"
 
 up: network ## Запустить все сервисы
+	@echo "$(GREEN)🚀 Сетап приложения$(NC)"
+	./scripts/setup.sh
 	@echo "$(GREEN)🚀 Генерация SSL сертификатов...$(NC)"
 	./docker/scripts/generate-certs.sh
 	@echo "$(GREEN)🚀 Запускаю все сервисы...$(NC)"

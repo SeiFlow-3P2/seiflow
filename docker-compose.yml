@@ -3,7 +3,7 @@ include:
   - docker/services/auth-service.yml
   #- docker/services/payment-service.yml
   - docker/services/board-service.yml
-  #- docker/services/calendar-service.yml
+  - docker/services/calendar-service.yml
   - docker/services/api-gateway.yml
   - docker/services/notification-service.yml
   
