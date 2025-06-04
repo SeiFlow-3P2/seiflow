@@ -1,14 +1,24 @@
-version: '3.8'
+networks:
+  backend:
+    external: true
+    name: seiflow_backend
 
 services:
   nginx:
-    image: nginx:latest
+    image: nginx:alpine
+    container_name: seiflow_nginx
     ports:
       - "80:80"
-      - "443:443"  
+      - "443:443"
     volumes:
-      - ./configs/nginx.conf:/etc/nginx/nginx.conf
-      - ./certs:/etc/nginx/certs
-      - ./services/seiflow_frontend:/usr/share/nginx/html
+      - ./configs/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ../../services/seiflow_frontend:/usr/share/nginx/html:ro
+    networks:
+      - backend
     restart: unless-stopped
-    
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3

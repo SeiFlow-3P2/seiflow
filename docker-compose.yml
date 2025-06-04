@@ -10,8 +10,4 @@ include:
   # Общая инфраструктура
   - docker/infrastructure/kafka.yml
   - docker/infrastructure/monitoring.yml
-
-networks:
-  backend:
-    driver: bridge
-    name: seiflow_backend
+  - docker/infrastructure/nginx-service.yml

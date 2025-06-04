@@ -14,18 +14,22 @@ volumes:
     driver: local
   zookeeper_data:
     driver: local
+  zookeeper_logs:
+    driver: local
 
 services:
   zookeeper:
-    image: confluentinc/cp-zookeeper:7.7.1
+    image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
     restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_DATA_DIR: /var/lib/zookeeper/data
+      ZOOKEEPER_DATA_LOG_DIR: /var/lib/zookeeper/log
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
-      - zookeeper_data:/var/lib/zookeeper/log
+      - zookeeper_logs:/var/lib/zookeeper/log
     ports:
       - "${ZOOKEEPER_PORT}:2181"
     networks:
@@ -37,7 +41,7 @@ services:
       retries: 5
 
   kafka_broker_1:
-    image: confluentinc/cp-kafka:7.7.1
+    image: confluentinc/cp-kafka:7.5.0
     container_name: kafka_broker_1
     depends_on:
       zookeeper:
@@ -66,7 +70,7 @@ services:
       start_period: 40s
 
   kafka_broker_2:
-    image: confluentinc/cp-kafka:7.7.1
+    image: confluentinc/cp-kafka:7.5.0
     container_name: kafka_broker_2
     depends_on:
       zookeeper:
@@ -95,7 +99,7 @@ services:
       start_period: 40s
 
   kafka_broker_3:
-    image: confluentinc/cp-kafka:7.7.1
+    image: confluentinc/cp-kafka:7.5.0
     container_name: kafka_broker_3
     depends_on:
       zookeeper:
@@ -124,7 +128,7 @@ services:
       start_period: 40s
 
   kafka_ui:
-    image: provectuslabs/kafka-ui:v0.7.2
+    image: provectuslabs/kafka-ui:latest
     container_name: kafka_ui
     restart: unless-stopped
     depends_on:
@@ -144,7 +148,7 @@ services:
       - kafka_internal
 
   kafka_init:
-    image: confluentinc/cp-kafka:7.7.1
+    image: confluentinc/cp-kafka:7.5.0
     container_name: kafka_init
     depends_on:
       kafka_broker_1:
