@@ -133,13 +133,13 @@ make health         # 🩺 Проверить здоровье всех серв
 
 | 🛠️ Сервис | 🌐 URL | 📱 Порт | 📝 Статус |
 |-----------|--------|---------|-----------|
-| **Frontend** | [localhost:80](http://localhost:80) | 80/443 | 🔧 В разработке |
-| **API Gateway** | [localhost:8080](http://localhost:8080) | 8080 | 🔧 Требует Dockerfile |
-| **Auth Service** | `localhost:8093` | 8093 | 🔧 Требует Dockerfile |
-| **Board Service** | `localhost:8090` | 8090 | 🔧 Требует Dockerfile |
-| **Calendar Service** | `localhost:8092` | 8092 | 🔧 Требует Dockerfile |
-| **Payment Service** | `localhost:8091` | 8091 | ✅ Готов к запуску |
-| **Notification Service** | - | - | 🔧 Требует Dockerfile |
+| **Frontend** | [localhost:80](http://localhost:80) | 80/443 | ✅ Готов к запуску |
+| **API Gateway** | [localhost:8080](http://localhost:8080) | 8080 | ✅ Готов к запуску |
+| **Auth Service** | `localhost:8093` | 8093 | ✅ Готов к запуску |
+| **Board Service** | `localhost:8090` | 8090 | ✅ Готов к запуску |
+| **Calendar Service** | `localhost:8092` | 8092 | ✅ Готов к запуску |
+| **Payment Service** | `localhost:8091` | 8091 | 🔧 Требует Dockerfile |
+| **Notification Service** | - | - | ✅ Готов к запуску |
 
 ---
 
