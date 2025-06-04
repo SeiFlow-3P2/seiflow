@@ -6,8 +6,6 @@ networks:
     name: seiflow_backend
 
 volumes:
-  calendar_mongo_data:
-    driver: local
   calendar_redis_data:
     driver: local
 
@@ -23,44 +21,32 @@ services:
       - calendar_net
       - backend
     depends_on:
-      calendar_mongo:
-        condition: service_healthy
       calendar_redis:
         condition: service_healthy
     environment:
-      MONGO_HOST: calendar_mongo
-      MONGO_PORT: 27017
-      MONGO_USERNAME: ${CALENDAR_MONGO_ROOT_USERNAME}
-      MONGO_PASSWORD: ${CALENDAR_MONGO_ROOT_PASSWORD}
+      PORT: ${CALENDAR_SERVICE_PORT}
+      APP_READ_TIMEOUT: ${CALENDAR_APP_READ_TIMEOUT}
+      APP_WRITE_TIMEOUT: ${CALENDAR_APP_WRITE_TIMEOUT}
+      APP_IDLE_TIMEOUT: ${CALENDAR_APP_IDLE_TIMEOUT}
+      
+      MONGO_URI: mongodb+srv://${CALENDAR_MONGO_ROOT_USERNAME}:${CALENDAR_MONGO_ROOT_PASSWORD}@calendar.kkbc5wl.mongodb.net/?retryWrites=true&w=majority&appName=${CALENDAR_MONGO_DATABASE}
+      MONGO_TIMEOUT: ${CALENDAR_MONGO_TIMEOUT}
       MONGO_DATABASE: ${CALENDAR_MONGO_DATABASE}
-      REDIS_HOST: calendar_redis
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${CALENDAR_REDIS_PASSWORD}
-    restart: unless-stopped
 
-  calendar_mongo:
-    image: mongo:7
-    container_name: calendar_mongo
+      KAFKA_BROKERS_NOTIFICATION: ${KAFKA_BROKER}
+      KAFKA_TOPIC_NOTIFICATION: ${CALENDAR_KAFKA_TOPIC_NOTIFICATION}
+      KAFKA_GROUP_ID_BOARD_EVENTS: ${CALENDAR_KAFKA_GROUP_ID_BOARD_EVENTS}
+      KAFKA_BROKERS_BOARD_EVENTS: ${KAFKA_BROKER}
+      KAFKA_TOPIC_BOARD_EVENTS: ${KAFKA_TOPIC_BOARD_EVENTS}
+
+      AUTH_SERVICE_ADDRESS: ${AUTH_SERVICE_ADDR}
+      EVENT_NOTIFIER_INTERVAL_SECONDS: ${CALENDAR_EVENT_NOTIFIER_INTERVAL_SECONDS}
+      OTEL_ADDR: ${OTEL_ADDR}
+      PROMETHEUS_PORT: ${CALENDAR_PROMETHEUS_PORT}
     restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${CALENDAR_MONGO_ROOT_USERNAME}
-      MONGO_INITDB_ROOT_PASSWORD: ${CALENDAR_MONGO_ROOT_PASSWORD}
-      MONGO_INITDB_DATABASE: ${CALENDAR_MONGO_DATABASE}
-    volumes:
-      - calendar_mongo_data:/data/db
-    ports:
-      - "${CALENDAR_MONGO_PORT}:27017"
-    networks:
-      - calendar_net
-    healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 40s
 
   calendar_redis:
-    image: redis:7-alpine
+    image: redis:7.4-alpine
     container_name: calendar_redis
     restart: unless-stopped
     ports:
@@ -75,21 +61,3 @@ services:
       interval: 30s
       timeout: 10s
       retries: 5
-
-  calendar_mongo_express:
-    image: mongo-express
-    container_name: calendar_mongo_express
-    restart: unless-stopped
-    ports:
-      - "${CALENDAR_MONGO_EXPRESS_PORT}:8081"
-    environment:
-      ME_CONFIG_MONGODB_ADMINUSERNAME: ${CALENDAR_MONGO_ROOT_USERNAME}
-      ME_CONFIG_MONGODB_ADMINPASSWORD: ${CALENDAR_MONGO_ROOT_PASSWORD}
-      ME_CONFIG_MONGODB_SERVER: calendar_mongo
-      ME_CONFIG_BASICAUTH_USERNAME: ${ME_CONFIG_BASICAUTH_USERNAME}
-      ME_CONFIG_BASICAUTH_PASSWORD: ${ME_CONFIG_BASICAUTH_PASSWORD}
-    depends_on:
-      calendar_mongo:
-        condition: service_healthy
-    networks: 
-      - calendar_net

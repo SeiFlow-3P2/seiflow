@@ -3,14 +3,38 @@ name: Deploy to Development
 on:
   push:
     branches: [ develop ]
-  workflow_dispatch:
+  repository_dispatch:
+    types: [submodule-updated]
 
 env:
   ENVIRONMENT: development
   REGISTRY: ghcr.io
 
 jobs:
+  update-modules:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout 
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+          token: ${{ secrets.SEIFLOW_SECRET }}
+
+      - name: Update submodules
+        run: |
+          git submodule update --remote --checkout
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          if git diff --quiet --exit-code; then
+            echo "No changes to commit"
+          else
+            git add .
+            git commit -m "Update submodules"
+            git push
+          fi
+
   deploy-dev:
+    needs: update-modules
     runs-on: ubuntu-latest
     environment: development
     
@@ -21,24 +45,24 @@ jobs:
         echo "Environment: ${{ env.ENVIRONMENT }}"
         echo "✅ Development environment ready"
         
-    - name: Build and push images
-      run: |
-        echo "Building Docker images for development..."
-        echo "✅ Images built and pushed to registry"
+    # - name: Build and push images
+    #   run: |
+    #     echo "Building Docker images for development..."
+    #     echo "✅ Images built and pushed to registry"
         
-    - name: Deploy to development
-      run: |
-        echo "Deploying to development environment..."
-        echo "🚀 Services deploying..."
-        sleep 2
-        echo "✅ Deployment to development completed"
+    # - name: Deploy to development
+    #   run: |
+    #     echo "Deploying to development environment..."
+    #     echo "🚀 Services deploying..."
+    #     sleep 2
+    #     echo "✅ Deployment to development completed"
         
-    - name: Run health checks
-      run: |
-        echo "Running health checks..."
-        echo "✅ All services healthy"
+    # - name: Run health checks
+    #   run: |
+    #     echo "Running health checks..."
+    #     echo "✅ All services healthy"
         
-    - name: Notify team
-      run: |
-        echo "📢 Development deployment completed successfully"
-        echo "🔗 Dev URL: https://dev.exemple.com"
+    # - name: Notify team
+    #   run: |
+    #     echo "📢 Development deployment completed successfully"
+    #     echo "🔗 Dev URL: https://dev.exemple.com"

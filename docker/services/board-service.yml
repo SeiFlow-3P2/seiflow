@@ -31,6 +31,7 @@ services:
       KAFKA_BROKERS: "${KAFKA_BROKERS}"
       OTEL_ADDR: ${OTEL_ADDR}
       PORT: ${BOARD_SERVICE_PORT}
+      MONGO_DATABASE: ${BOARD_MONGO_DATABASE}
     restart: unless-stopped
 
   board_redis:

@@ -1,16 +1,13 @@
 include:
   # Сервисы
   - docker/services/auth-service.yml
-  - docker/services/payment-service.yml
+  #- docker/services/payment-service.yml
   - docker/services/board-service.yml
   - docker/services/calendar-service.yml
   - docker/services/api-gateway.yml
+  - docker/services/notification-service.yml
   
   # Общая инфраструктура
   - docker/infrastructure/kafka.yml
   - docker/infrastructure/monitoring.yml
-
-networks:
-  backend:
-    driver: bridge
-    name: seiflow_backend
+  - docker/infrastructure/nginx-service.yml
